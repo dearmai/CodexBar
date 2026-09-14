@@ -4,7 +4,7 @@ SHELL := /bin/bash
 unexport FILTER
 test_filter_arg = $(if $(value FILTER),--filter '$(subst ','"'"',$(value FILTER))')
 
-.PHONY: build check docs-list format lint release restart start start-debug start-release stop test test-fast test-skip-build test-live test-tty
+.PHONY: build check docs-list format install lint release restart start start-debug start-release stop test test-fast test-skip-build test-live test-tty
 
 start:
 	./Scripts/compile_and_run.sh
@@ -33,6 +33,11 @@ docs-list:
 
 build:
 	swift build
+
+# Builds the CLI and the Qt desktop, then installs both plus the launcher entry for this
+# user. Pass installer flags through INSTALL_ARGS, e.g. INSTALL_ARGS=--no-autostart.
+install:
+	./Scripts/install_linux.sh $(INSTALL_ARGS)
 
 test:
 	./Scripts/test.sh
