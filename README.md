@@ -41,7 +41,7 @@ The Qt 6 desktop app supports Wayland and X11, with an optional Omarchy widget.
 Published desktop archives target x86_64 and ARM64 and require glibc 2.39+,
 Qt 6.4+, and a separately installed CodexBar CLI. Python 3 runs the per-user installer.
 
-Follow the [Linux installation guide](Integrations/Linux/README.md#install-release-archives)
+Follow the [Linux installation guide](Integrations/Linux/README.md#릴리스-아카이브-설치)
 for Arch/Omarchy, Fedora, and Debian/Ubuntu runtime packages, verified release
 downloads, and upgrades. It keeps the CLI's resource bundle beside its executable
 and installs a launcher and optional login startup. Open Settings to choose
