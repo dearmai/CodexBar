@@ -51,7 +51,7 @@ void DesktopController::installScriptTranslator(QJSValue &model, const QByteArra
 
 DesktopController::DesktopController(const QString &cliOverride, QObject *parent) : QObject(parent) {
     m_usageModel = module(m_engine, ":/Shared/Usage.js",
-        "rows:rows, costs:costs, command:command, summary:summary, resetText:resetText, setTranslator:setTranslator");
+        "rows:rows, costs:costs, command:command, summary:summary, resetText:resetText, providerName:providerName, trayLine:trayLine, setTranslator:setTranslator");
     m_noticeModel = module(m_engine, ":/Shared/Notifications.js",
         "transition:transition, summary:summary, setTranslator:setTranslator");
     // The models must translate before any usage is parsed, or cached rows keep English labels.
@@ -307,6 +307,20 @@ void DesktopController::showWindow(const QString &page) {
     emit windowRequested(page);
 }
 
+QString DesktopController::providerName(const QString &id) const {
+    return call(m_usageModel, "providerName", {QJSValue(id)}).toString();
+}
+
+// One compact line per provider for the tray icon's menu and tooltip.
+QStringList DesktopController::trayLines() {
+    const auto mode = m_settings.value("quotaDisplay").toString();
+    const auto now = double(QDateTime::currentMSecsSinceEpoch());
+    QStringList lines;
+    for (const auto &entry : m_entries)
+        lines.append(call(m_usageModel, "trayLine", {m_engine.toScriptValue(entry), mode, now}).toString());
+    return lines;
+}
+
 QJsonObject DesktopController::snapshot() const {
     QJsonArray compact;
     for (const auto &entry : m_entries) {
@@ -355,6 +369,8 @@ bool DesktopController::listen(const QString &socketPath) {
                     const bool ok = action == "status" || ((action == "enable" || action == "disable") && setLaunchAtLogin(action == "enable"));
                     response = {{"ok", ok}, {"enabled", launchAtLogin()}};
                 }
+                else if (command == "status-line")
+                    response = {{"ok", true}, {"line", trayLines().join("  ")}, {"stale", stale()}};
                 else if (command == "refresh") { refresh(); refreshCosts(); }
                 else if (command == "settings" || command == "usage" || command == "spending") showWindow(command);
                 else if (command == "configure" && request.value("settings").isObject()) {

@@ -46,6 +46,8 @@ public:
     bool launchAtLogin() const;
     Q_INVOKABLE bool setLaunchAtLogin(bool enabled);
     Q_INVOKABLE bool accountAction(const QString &provider, const QString &action);
+    Q_INVOKABLE QString providerName(const QString &id) const;
+    Q_INVOKABLE QStringList trayLines();
     QVariantList entries() const { return m_entries; }
     QVariantList spending() const { return m_spending; }
     QVariantMap settings() const { return m_settings; }

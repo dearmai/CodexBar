@@ -221,6 +221,40 @@ GNOME은 3.26 이후 자체 트레이 호스트를 제공하지 않으므로, GN
 실행되므로, 런처 항목이나 `codexbar-linux --usage`로 창을 열거나 설정에서 트레이를
 끄십시오.
 
+트레이 메뉴에는 현재 할당량이 함께 표시됩니다. GNOME의 트레이 호스트는 좌클릭 한 번에
+메뉴만 열고 `Activate`는 더블클릭에서만 호출하므로, 한 번의 클릭으로 사용량을 바로 읽을
+수 있도록 공급자·구간·남은 비율·재설정 시각을 메뉴 위쪽에 넣었습니다. 창을 열려면 메뉴의
+"사용량 및 지출…"을 고르거나 트레이 아이콘을 더블클릭하십시오. `ItemIsMenu`가 거짓일 때
+셸이 더블클릭 여부를 기다리므로 메뉴가 약 0.4초 뒤에 열리는데, 이 속성은 Qt의
+`QDBusTrayIcon`에 고정되어 있어 앱에서 바꿀 수 없습니다.
+
+### 패널에 한 줄로 표시
+
+`--status-line`은 실행 중인 앱에서 현재 사용량을 한 줄로 출력합니다. IPC로 값을 읽어오기만
+하므로 공급자를 새로 조회하지 않아 짧은 주기로 호출해도 부담이 없습니다.
+
+```sh
+codexbar-linux --status-line
+# Codex: 11% (1W:6D 3H)  Claude: 55% (5H:3H 20M)/10% (1W:4D 21H)
+```
+
+퍼센트는 설정의 할당량 표시(남은 양/사용한 양)를 그대로 따릅니다. 앱이 실행 중이 아니면
+표준 출력은 비고 종료 코드 1을 반환하므로, 패널 위젯에는 빈 칸으로 나타납니다.
+
+GNOME 상단 바에 이 줄을 직접 띄우려면 명령 출력을 패널에 그려주는 확장이 필요합니다.
+[Executor](https://extensions.gnome.org/extension/2932/executor/)가 GNOME 40을 지원합니다.
+설치한 뒤 Executor 설정에서 명령을 `codexbar-linux --status-line`, 주기를 30초 정도로
+지정하면 됩니다.
+
+트레이 아이콘 자체에 텍스트를 넣는 방법은 쓸 수 없습니다. StatusNotifierItem에는
+`XAyatanaLabel` 확장 속성이 있지만, AppIndicator 확장의
+`interfaces-xml/StatusNotifierItem.xml`에서 해당 속성과 `XAyatanaNewLabel` 시그널이 주석
+처리되어 있어 GDBusProxy가 노출하지 않습니다. 앱이 속성을 내보내도 읽히지 않습니다.
+아이콘 픽스맵에 글자를 그리는 우회로도 막혀 있는데, 확장이 아이콘 폭과 높이를 같은 값으로
+강제해 가로로 긴 이미지가 찌그러집니다.
+
+같은 줄을 waybar, polybar, tmux 상태줄 등에서도 그대로 쓸 수 있습니다.
+
 Rocky Linux 9.8(GNOME Shell 40.10, X11 세션, EPEL의 Qt 6.6.2)에서 확인한 결과, 소스
 빌드가 정상 실행되고 창이 렌더링되며 AppIndicator 확장을 활성화하면 앱이 셸에
 StatusNotifierItem을 등록합니다. GNOME Wayland 세션, KDE, 그 밖의 컴포지터는 아직 직접

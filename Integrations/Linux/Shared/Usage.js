@@ -40,8 +40,9 @@ function rows(text, showIdentity) {
             var label = minutes >= 1440 ? format("%1 day", minutes / 1440) :
                 minutes > 0 ? format("%1 hour", minutes / 60) :
                 [translate("Session"), translate("Weekly"), translate("Additional")][index];
-            windows.push({key: key, label: label, remaining: left, resetsAt: window.resetsAt || "",
-                pace: entry.pace && entry.pace[key] ? String(entry.pace[key].summary || "") : ""});
+            windows.push({key: key, label: label, shortLabel: windowShort(minutes), remaining: left,
+                resetsAt: window.resetsAt || "",
+                pace: entry.pace && entry.pace[key] ? paceText(entry.pace[key].summary) : ""});
         });
         return {
             provider: entry.provider,
@@ -49,7 +50,7 @@ function rows(text, showIdentity) {
             accountLabel: showIdentity ? String(identity.accountEmail || usage.accountEmail || "") : "",
             accountNumber: entryIndex + 1,
             plan: String(identity.loginMethod || usage.loginMethod || ""),
-            status: entry.status ? String(entry.status.description || entry.status.indicator || translate("Unknown")) : "",
+            status: entry.status ? statusText(entry.status.description || entry.status.indicator) || translate("Unknown") : "",
             statusLevel: entry.status ? String(entry.status.indicator || "unknown") : "unknown",
             details: Array.isArray(usage.details) ? usage.details.slice(0, 8).map(function(section) {
                 return {title: String(section.title || ""), rows: (section.rows || []).slice(0, 24).map(function(row) {
@@ -81,6 +82,39 @@ function command(settings) {
             args.push("--account-index", String(settings.accountIndex));
     }
     return args;
+}
+
+function paceDuration(text) {
+    return String(text).replace(/(\d+)\s*([dhms])\b/g, function(whole, value, unit) {
+        var key = {d: "%1d", h: "%1h", m: "%1m", s: "%1s"}[unit];
+        return key ? format(key, value) : whole;
+    });
+}
+
+function paceSegment(segment) {
+    var text = String(segment).trim();
+    var match;
+    if (text === "On pace") return translate("On pace");
+    if ((match = /^(\d+)% in deficit$/.exec(text))) return format("%1% in deficit", match[1]);
+    if ((match = /^(\d+)% in reserve$/.exec(text))) return format("%1% in reserve", match[1]);
+    if ((match = /^Expected (\d+)% used$/.exec(text))) return format("Expected %1% used", match[1]);
+    if (text === "Lasts until reset") return translate("Lasts until reset");
+    if (text === "Projected empty now") return translate("Projected empty now");
+    if ((match = /^Projected empty in (.+)$/.exec(text))) return format("Projected empty in %1", paceDuration(match[1]));
+    if (text === "Runs out now") return translate("Runs out now");
+    if ((match = /^Runs out in (.+)$/.exec(text))) return format("Runs out in %1", paceDuration(match[1]));
+    return text;
+}
+
+function paceText(summary) {
+    if (!summary) return "";
+    return String(summary).split(" | ").map(paceSegment).join(" | ");
+}
+
+// Provider status pages report these in English; anything unrecognised passes through.
+function statusText(description) {
+    var text = String(description || "");
+    return text ? translate(text) : text;
 }
 
 function displayText(value, showIdentity) {
@@ -159,6 +193,37 @@ function providerName(id) {
 }
 
 function quotaValue(remaining, mode) { return mode === "used" ? 100 - remaining : remaining; }
+
+// Compact, locale-independent forms for the tray, where width is scarce: "5H", "1W", "6D 3H".
+function windowShort(minutes) {
+    if (!(minutes > 0)) return "";
+    if (minutes % 10080 === 0) return (minutes / 10080) + "W";
+    if (minutes % 1440 === 0) return (minutes / 1440) + "D";
+    if (minutes % 60 === 0) return (minutes / 60) + "H";
+    return minutes + "M";
+}
+
+function shortReset(value, now) {
+    var timestamp = Date.parse(value);
+    if (!isFinite(timestamp)) return "";
+    var minutes = Math.ceil((timestamp - now) / 60000);
+    if (minutes <= 0) return "0M";
+    if (minutes < 60) return minutes + "M";
+    if (minutes < 1440) return Math.floor(minutes / 60) + "H " + minutes % 60 + "M";
+    return Math.floor(minutes / 1440) + "D " + Math.floor(minutes % 1440 / 60) + "H";
+}
+
+// One line per provider: "Claude: 53% (5H:3H 29M)/91% (1W:4D 21H)". The percentage follows the
+// quota display preference, so this reads the same way as the windows do.
+function trayLine(entry, mode, now) {
+    var windows = (entry.windows || []).map(function(window) {
+        var detail = [window.shortLabel, shortReset(window.resetsAt, now)].filter(function(piece) {
+            return piece;
+        });
+        return quotaValue(window.remaining, mode) + "%" + (detail.length ? " (" + detail.join(":") + ")" : "");
+    });
+    return providerName(entry.provider) + ": " + (windows.length ? windows.join("/") : "\u2014");
+}
 
 function resetText(timestamp, now, mode) {
     var date = new Date(timestamp);

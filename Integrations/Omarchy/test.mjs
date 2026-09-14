@@ -85,3 +85,69 @@ test('display preferences keep underlying quota and reset data intact', () => {
     assert.ok(model.resetText(time, 0, 'absolute').startsWith('Resets '));
     assert.ok(model.resetText(time, 0, 'both').includes(' · '));
 });
+
+test('tray lines stay compact and follow the quota display preference', () => {
+    const now = Date.parse('2026-09-14T05:35:00Z');
+    const claude = {provider: 'claude', windows: [
+        {shortLabel: '5H', remaining: 53, resetsAt: '2026-09-14T09:00:00Z'},
+        {shortLabel: '1W', remaining: 91, resetsAt: '2026-09-19T03:00:00Z'}]};
+    assert.equal(model.trayLine(claude, 'remaining', now),
+        'Claude: 53% (5H:3H 25M)/91% (1W:4D 21H)');
+    assert.equal(model.trayLine(claude, 'used', now),
+        'Claude: 47% (5H:3H 25M)/9% (1W:4D 21H)');
+    // A provider with nothing to report must not render a bare "Codex: ".
+    assert.equal(model.trayLine({provider: 'codex', windows: []}, 'remaining', now), 'Codex: —');
+    // An unparsable reset drops the countdown rather than the whole window.
+    assert.equal(model.trayLine({provider: 'codex', windows: [{shortLabel: '1W', remaining: 89, resetsAt: ''}]},
+        'remaining', now), 'Codex: 89% (1W)');
+});
+
+test('compact window labels prefer the largest exact unit', () => {
+    assert.equal(model.windowShort(10080), '1W');
+    assert.equal(model.windowShort(20160), '2W');
+    assert.equal(model.windowShort(1440), '1D');
+    assert.equal(model.windowShort(300), '5H');
+    assert.equal(model.windowShort(45), '45M');
+    assert.equal(model.windowShort(0), '');
+    assert.equal(model.windowShort(undefined), '');
+});
+
+test('short resets round up and never go negative', () => {
+    const now = Date.parse('2026-09-14T00:00:00Z');
+    assert.equal(model.shortReset('2026-09-14T00:30:00Z', now), '30M');
+    assert.equal(model.shortReset('2026-09-14T03:29:00Z', now), '3H 29M');
+    assert.equal(model.shortReset('2026-09-20T03:00:00Z', now), '6D 3H');
+    assert.equal(model.shortReset('2026-09-13T00:00:00Z', now), '0M');
+    assert.equal(model.shortReset('nonsense', now), '');
+});
+
+test('pace text translates known segments and passes the rest through', () => {
+    // Identity translator: the English source must survive the round trip unchanged.
+    assert.equal(model.paceText('On pace | Expected 12% used | Lasts until reset'),
+        'On pace | Expected 12% used | Lasts until reset');
+    assert.equal(model.paceText('22% in deficit | Expected 33% used | Projected empty in 1h 22m'),
+        '22% in deficit | Expected 33% used | Projected empty in 1h 22m');
+    assert.equal(model.paceText('21% in reserve | Runs out in 3d 4h'),
+        '21% in reserve | Runs out in 3d 4h');
+    // An unrecognised segment is preserved rather than dropped.
+    assert.equal(model.paceText('On pace | Burning slowly'), 'On pace | Burning slowly');
+    assert.equal(model.paceText(''), '');
+    assert.equal(model.paceText(undefined), '');
+});
+
+test('pace segments translate through the installed translator', () => {
+    model.setTranslator(text => ({
+        'On pace': '정상 속도',
+        'Expected %1% used': '예상 사용량 %1%',
+        'Projected empty in %1': '%1 후 소진 예상',
+        '%1h': '%1시간',
+        '%1m': '%1분',
+        'Partially Degraded Service': '부분 성능 저하',
+    }[text] || text));
+    assert.equal(model.paceText('On pace | Expected 12% used'), '정상 속도 | 예상 사용량 12%');
+    assert.equal(model.paceText('Projected empty in 1h 22m'), '1시간 22분 후 소진 예상');
+    assert.equal(model.statusText('Partially Degraded Service'), '부분 성능 저하');
+    assert.equal(model.statusText('Something New'), 'Something New');
+    model.setTranslator(null);
+    assert.equal(model.paceText('On pace'), 'On pace');
+});

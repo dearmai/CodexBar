@@ -53,14 +53,16 @@ int main(int argc, char **argv) {
     parser.addHelpOption(); parser.addVersionOption();
     for (const auto &name : {"snapshot", "refresh", "settings", "spending", "usage", "quit", "background", "no-tray"})
         parser.addOption(QCommandLineOption(name, QString("%1 the running desktop app").arg(name)));
+    // Plain one-line usage for panel widgets and status bars that run a command and show stdout.
+    parser.addOption(QCommandLineOption("status-line", "Print one line of current usage and exit"));
     parser.addOption(QCommandLineOption("autostart", "Set login startup: enable, disable, status", "action"));
     parser.addOption(QCommandLineOption("configure", "Update desktop settings through local IPC", "json"));
     parser.addOption(QCommandLineOption("cli", "CodexBar CLI executable for a new instance", "path"));
     parser.process(*application);
     QString command = "usage";
-    for (const auto &name : {"background", "usage", "settings", "spending", "refresh", "snapshot", "quit", "configure", "autostart"})
+    for (const auto &name : {"background", "usage", "settings", "spending", "refresh", "snapshot", "status-line", "quit", "configure", "autostart"})
         if (parser.isSet(name)) command = name;
-    const bool clientOnly = QStringList{"snapshot", "refresh", "quit", "configure", "autostart"}.contains(command);
+    const bool clientOnly = QStringList{"snapshot", "refresh", "status-line", "quit", "configure", "autostart"}.contains(command);
     const bool noTray = parser.isSet("no-tray");
     const auto cli = parser.value("cli");
     QJsonObject message{{"command", command}};
@@ -83,8 +85,16 @@ int main(int argc, char **argv) {
     const auto socketPath = runtime + "/desktop.sock";
     auto reply = request(socketPath, message);
     if (!reply.isEmpty()) {
-        std::fwrite(reply.constData(), 1, reply.size(), stdout);
-        return QJsonDocument::fromJson(reply).object().value("ok").toBool(true) ? 0 : 1;
+        const auto object = QJsonDocument::fromJson(reply).object();
+        if (command == "status-line") {
+            // Panel widgets consume stdout verbatim, so emit the text rather than the envelope.
+            const auto line = object.value("line").toString().toUtf8();
+            std::fwrite(line.constData(), 1, line.size(), stdout);
+            std::fputc('\n', stdout);
+        } else {
+            std::fwrite(reply.constData(), 1, reply.size(), stdout);
+        }
+        return object.value("ok").toBool(true) ? 0 : 1;
     }
     if (clientOnly) { std::fputs("CodexBar desktop is not running\n", stderr); return 1; }
     QLockFile lock(runtime + "/desktop.lock");
@@ -150,6 +160,10 @@ int main(int argc, char **argv) {
     if (engine.rootObjects().isEmpty()) return 1;
     QSystemTrayIcon tray(QIcon(":/icon.svg"));
     QMenu menu;
+    // GNOME's tray host opens this menu on a single click and only calls Activate on a double
+    // click, so the quota rows belong here: one click is enough to read current usage. The
+    // rows are rebuilt above this separator; the actions below it stay put.
+    QAction *const actionsAnchor = menu.addSeparator();
     menu.addAction(QObject::tr("Usage & Spend…"), &controller, [&controller] { controller.showWindow("usage"); });
     menu.addAction(QObject::tr("Settings…"), &controller, [&controller] { controller.showWindow("settings"); });
     menu.addSeparator();
@@ -159,8 +173,27 @@ int main(int argc, char **argv) {
     QObject::connect(&tray, &QSystemTrayIcon::activated, &controller, [&controller](QSystemTrayIcon::ActivationReason reason) {
         if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) controller.showWindow("usage");
     });
+    QList<QAction *> quotaRows;
+    auto updateTrayMenu = [&](const QStringList &lines) {
+        qDeleteAll(quotaRows);
+        quotaRows.clear();
+        auto addRow = [&](const QString &text) {
+            auto *row = new QAction(text, &menu);
+            row->setEnabled(false);
+            menu.insertAction(actionsAnchor, row);
+            quotaRows.append(row);
+        };
+        for (const auto &line : lines) addRow(line);
+        if (lines.isEmpty()) {
+            const auto error = controller.error();
+            addRow(error.isEmpty() ? QObject::tr("Waiting for usage…") : error);
+        }
+    };
+
     bool trayHostWarned = false;
     auto updateTray = [&] {
+        const auto lines = controller.trayLines();
+        updateTrayMenu(lines);
         const bool trayWanted = !noTray && controller.settings().value("showTray").toBool();
         // GNOME ships no tray host of its own; without a StatusNotifier extension the icon
         // never appears and Qt reports no error. Say so once instead of failing silently.
@@ -171,10 +204,8 @@ int main(int argc, char **argv) {
                        "Windows still open from the launcher or --usage.\n", stderr);
         }
         tray.setVisible(trayWanted);
-        tray.setToolTip("CodexBar · " +
-            (controller.summary().isEmpty() ? QObject::tr("Usage unavailable") : controller.summary()) +
-            " · " + controller.settings().value("quotaDisplay").toString() +
-            (controller.stale() ? QObject::tr(" · out of date") : QString()));
+        tray.setToolTip((lines.isEmpty() ? QObject::tr("Usage unavailable") : lines.join(QStringLiteral("  ")))
+            + (controller.stale() ? QObject::tr(" · out of date") : QString()));
         if (controller.settings().value("trayStyle") == "icon") { tray.setIcon(QIcon(":/icon.svg")); return; }
         QVariantList windows;
         if (!controller.entries().isEmpty()) windows = controller.entries().first().toMap().value("windows").toList();

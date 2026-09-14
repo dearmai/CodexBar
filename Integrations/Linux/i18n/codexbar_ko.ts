@@ -136,6 +136,10 @@
    <source> · out of date</source>
    <translation> · 오래됨</translation>
   </message>
+  <message>
+   <source>Waiting for usage…</source>
+   <translation>사용량을 기다리는 중…</translation>
+  </message>
  </context>
  <context>
   <name>SettingsWindow</name>
@@ -482,6 +486,110 @@
   <message>
    <source>Unknown provider</source>
    <translation>알 수 없는 공급자</translation>
+  </message>
+  <message>
+   <source>On pace</source>
+   <translation>정상 속도</translation>
+  </message>
+  <message>
+   <source>%1% in deficit</source>
+   <translation>%1% 초과 사용</translation>
+  </message>
+  <message>
+   <source>%1% in reserve</source>
+   <translation>%1% 여유</translation>
+  </message>
+  <message>
+   <source>Expected %1% used</source>
+   <translation>예상 사용량 %1%</translation>
+  </message>
+  <message>
+   <source>Lasts until reset</source>
+   <translation>재설정까지 충분</translation>
+  </message>
+  <message>
+   <source>Projected empty now</source>
+   <translation>곧 소진 예상</translation>
+  </message>
+  <message>
+   <source>Projected empty in %1</source>
+   <translation>%1 후 소진 예상</translation>
+  </message>
+  <message>
+   <source>Runs out now</source>
+   <translation>곧 소진</translation>
+  </message>
+  <message>
+   <source>Runs out in %1</source>
+   <translation>%1 후 소진</translation>
+  </message>
+  <message>
+   <source>%1d</source>
+   <translation>%1일</translation>
+  </message>
+  <message>
+   <source>%1h</source>
+   <translation>%1시간</translation>
+  </message>
+  <message>
+   <source>%1m</source>
+   <translation>%1분</translation>
+  </message>
+  <message>
+   <source>%1s</source>
+   <translation>%1초</translation>
+  </message>
+  <message>
+   <source>Operational</source>
+   <translation>정상</translation>
+  </message>
+  <message>
+   <source>Degraded Performance</source>
+   <translation>성능 저하</translation>
+  </message>
+  <message>
+   <source>Partially Degraded Service</source>
+   <translation>부분 성능 저하</translation>
+  </message>
+  <message>
+   <source>Partial Outage</source>
+   <translation>부분 장애</translation>
+  </message>
+  <message>
+   <source>Major Outage</source>
+   <translation>전면 장애</translation>
+  </message>
+  <message>
+   <source>Minor Service Outage</source>
+   <translation>경미한 장애</translation>
+  </message>
+  <message>
+   <source>Under Maintenance</source>
+   <translation>점검 중</translation>
+  </message>
+  <message>
+   <source>Service Under Maintenance</source>
+   <translation>서비스 점검 중</translation>
+  </message>
+  <message>
+   <source>All Systems Operational</source>
+   <translation>모든 시스템 정상</translation>
+  </message>
+  <message>
+   <source>Partial System Outage</source>
+   <translation>일부 시스템 장애</translation>
+  </message>
+  <message>
+   <source>Major Service Outage</source>
+   <translation>주요 서비스 장애</translation>
+  </message>
+  <message>
+   <source>Degraded System Service</source>
+   <translation>시스템 성능 저하</translation>
+  </message>
+  <message>
+   <source>Service Disruption</source>
+   <translation>서비스 중단</translation>
   </message>
  </context>
  <context>
