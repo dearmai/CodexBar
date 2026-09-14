@@ -12,6 +12,8 @@ APP = Path(os.environ.get('CODEXBAR_LINUX_BINARY', '.local/linux-build/codexbar-
 
 
 class DesktopTests(unittest.TestCase):
+    locale = None
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
@@ -20,6 +22,9 @@ class DesktopTests(unittest.TestCase):
         self.environment = dict(os.environ, HOME=str(self.root), XDG_CONFIG_HOME=str(self.root / 'config'),
                                 XDG_DATA_HOME=str(self.root / 'data'), XDG_STATE_HOME=str(self.root / 'state'), XDG_RUNTIME_DIR=str(self.runtime),
                                 QT_QPA_PLATFORM=os.environ.get('CODEXBAR_TEST_PLATFORM', 'offscreen'), QT_QUICK_BACKEND='software', FIXTURE_HOME=str(self.root))
+        # Subclasses pin a locale to exercise the embedded translation catalogs.
+        self.environment.update({'LANG': self.locale, 'LC_ALL': self.locale} if self.locale else
+                                {'LANG': 'C', 'LC_ALL': 'C'})
         self.fake = self.root / 'fake-cli'
         self.fake.write_text('''#!/usr/bin/env python3
 import datetime,json,os,pathlib,sys,time
@@ -213,6 +218,24 @@ else:
         log = self.log.read()
         for error in ['ReferenceError', 'TypeError', 'failed to load', 'Cannot assign', 'Unable to assign', 'Binding loop']:
             self.assertNotIn(error, log)
+
+
+class KoreanLocaleTests(DesktopTests):
+    """Reruns the whole desktop suite in Korean, deliberately: every case above asserts on
+    machine-readable IPC fields (provider ids, settings keys, the tray summary), so a
+    translation that leaked into one of them fails here. The case below adds the positive
+    check that the catalog does reach the model strings the C++ engine builds, not just QML."""
+
+    locale = 'ko_KR.UTF-8'
+
+    def test_model_strings_follow_the_session_locale(self):
+        snapshot = self.client('--snapshot')
+        window = snapshot['entries'][0]['windows'][0]
+        self.assertEqual(window['label'], '5시간')
+        self.assertIn('재설정', window['resetText'])
+        # Provider ids and the tray summary stay untranslated.
+        self.assertEqual(snapshot['entries'][0]['provider'], 'codex')
+        self.assertEqual(snapshot['summary'], 'CX 60%')
 
 
 if __name__ == '__main__':

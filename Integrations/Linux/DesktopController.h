@@ -8,6 +8,20 @@
 #include <QTimer>
 #include <QVariant>
 
+/// Exposes Qt's translation catalogs to the shared JS models. The QML frontend reaches the
+/// same catalogs through qsTranslate, so both render a window label or notice identically.
+class ScriptTranslator : public QObject {
+    Q_OBJECT
+
+public:
+    explicit ScriptTranslator(const QByteArray &context, QObject *parent = nullptr)
+        : QObject(parent), m_context(context) {}
+    Q_INVOKABLE QString translate(const QString &text) const;
+
+private:
+    const QByteArray m_context;
+};
+
 class DesktopController : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList providers READ providers NOTIFY settingsChanged)
@@ -74,6 +88,7 @@ private:
     int m_generation = 0;
     bool m_configBlocked = false;
     void loadSettings(const QString &cliOverride);
+    void installScriptTranslator(QJSValue &model, const QByteArray &context);
     bool validate(QVariantMap &settings);
     void probe(QProcess &process, const QStringList &command, bool cost);
     void updateNotifications(const QVariantList &entries);

@@ -38,9 +38,25 @@ void stop(QProcess &process) {
 }
 }
 
+QString ScriptTranslator::translate(const QString &text) const {
+    return QCoreApplication::translate(m_context.constData(), text.toUtf8().constData());
+}
+
+void DesktopController::installScriptTranslator(QJSValue &model, const QByteArray &context) {
+    auto bridge = m_engine.newQObject(new ScriptTranslator(context, this));
+    auto factory = m_engine.evaluate("(function(bridge){return function(text){return bridge.translate(text);};})");
+    auto setter = model.property("setTranslator");
+    if (factory.isCallable() && setter.isCallable()) setter.call({factory.call({bridge})});
+}
+
 DesktopController::DesktopController(const QString &cliOverride, QObject *parent) : QObject(parent) {
-    m_usageModel = module(m_engine, ":/Shared/Usage.js", "rows:rows, costs:costs, command:command, summary:summary, resetText:resetText");
-    m_noticeModel = module(m_engine, ":/Shared/Notifications.js", "transition:transition, summary:summary");
+    m_usageModel = module(m_engine, ":/Shared/Usage.js",
+        "rows:rows, costs:costs, command:command, summary:summary, resetText:resetText, setTranslator:setTranslator");
+    m_noticeModel = module(m_engine, ":/Shared/Notifications.js",
+        "transition:transition, summary:summary, setTranslator:setTranslator");
+    // The models must translate before any usage is parsed, or cached rows keep English labels.
+    installScriptTranslator(m_usageModel, "Usage");
+    installScriptTranslator(m_noticeModel, "Notifications");
     m_noticeState = m_engine.newObject();
     loadSettings(cliOverride);
     loadProviders();

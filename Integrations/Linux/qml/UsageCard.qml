@@ -37,14 +37,19 @@ Frame {
                 RowLayout {
                     Layout.fillWidth: true
                     Label { text: modelData.label; Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText }
-                    Label { text: Usage.quotaValue(modelData.remaining, desktop.settings.quotaDisplay) + "% " + (desktop.settings.quotaDisplay === "used" ? "used" : "left"); font.bold: true }
+                    Label {
+                        text: desktop.settings.quotaDisplay === "used"
+                            ? qsTr("%1% used").arg(Usage.quotaValue(modelData.remaining, desktop.settings.quotaDisplay))
+                            : qsTr("%1% left").arg(Usage.quotaValue(modelData.remaining, desktop.settings.quotaDisplay))
+                        font.bold: true
+                    }
                 }
                 ProgressBar { Layout.fillWidth: true; from: 0; to: 100; value: Usage.quotaValue(modelData.remaining, desktop.settings.quotaDisplay); palette.highlight: desktop.settings.warningColors && modelData.remaining <= desktop.settings.notifyThreshold ? "#d97732" : root.accent }
                 Label { text: Usage.resetText(modelData.resetsAt, clock.now, desktop.settings.resetDisplay); opacity: 0.65; Layout.fillWidth: true; wrapMode: Text.Wrap }
                 Label { text: modelData.pace || ""; visible: desktop.settings.showPace && text !== ""; Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.7 }
             }
         }
-        Label { text: "Credits: " + root.entry.credits; visible: root.entry.credits !== null && root.entry.credits !== undefined }
+        Label { text: qsTr("Credits: %1").arg(root.entry.credits); visible: root.entry.credits !== null && root.entry.credits !== undefined }
         Repeater {
             model: root.entry.details || []
             ColumnLayout {

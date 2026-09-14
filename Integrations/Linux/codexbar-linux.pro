@@ -5,6 +5,10 @@ TARGET = codexbar-linux
 SOURCES += main.cpp DesktopController.cpp
 HEADERS += DesktopController.h
 RESOURCES += desktop.qrc
+# lrelease compiles the catalogs and embed_translations bundles them at :/i18n,
+# so a packaged binary carries its translations with no extra install step.
+CONFIG += lrelease embed_translations
+TRANSLATIONS += i18n/codexbar_ko.ts
 QMAKE_CXXFLAGS += -Wall -Wextra
 target.path = $$PREFIX/bin
 isEmpty(PREFIX): target.path = /usr/local/bin

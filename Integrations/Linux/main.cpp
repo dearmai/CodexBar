@@ -9,6 +9,7 @@
 #include <QIcon>
 #include <QJsonDocument>
 #include <QLocalSocket>
+#include <QLocale>
 #include <QLockFile>
 #include <QMenu>
 #include <QPainter>
@@ -18,6 +19,7 @@
 #include <QQuickStyle>
 #include <QStandardPaths>
 #include <QSystemTrayIcon>
+#include <QTranslator>
 #include <cstdio>
 #include <memory>
 #include <unistd.h>
@@ -102,6 +104,9 @@ int main(int argc, char **argv) {
     app.setQuitOnLastWindowClosed(false);
     app.setWindowIcon(QIcon(":/icon.svg"));
     QQuickStyle::setStyle("Fusion");
+    // Follow the session locale; an unmatched locale simply keeps the English sources.
+    QTranslator translator;
+    if (translator.load(QLocale(), "codexbar", "_", ":/i18n")) QCoreApplication::installTranslator(&translator);
     DesktopController controller(cli);
     if (!controller.listen(socketPath)) { std::fputs("Cannot start local IPC\n", stderr); return 1; }
     QPalette systemPalette = app.palette();
@@ -145,19 +150,31 @@ int main(int argc, char **argv) {
     if (engine.rootObjects().isEmpty()) return 1;
     QSystemTrayIcon tray(QIcon(":/icon.svg"));
     QMenu menu;
-    menu.addAction("Usage & Spend…", &controller, [&controller] { controller.showWindow("usage"); });
-    menu.addAction("Settings…", &controller, [&controller] { controller.showWindow("settings"); });
+    menu.addAction(QObject::tr("Usage & Spend…"), &controller, [&controller] { controller.showWindow("usage"); });
+    menu.addAction(QObject::tr("Settings…"), &controller, [&controller] { controller.showWindow("settings"); });
     menu.addSeparator();
-    menu.addAction("Refresh", &controller, [&controller] { controller.refresh(); controller.refreshCosts(); });
-    menu.addAction("Quit CodexBar", &app, &QCoreApplication::quit);
+    menu.addAction(QObject::tr("Refresh"), &controller, [&controller] { controller.refresh(); controller.refreshCosts(); });
+    menu.addAction(QObject::tr("Quit CodexBar"), &app, &QCoreApplication::quit);
     tray.setContextMenu(&menu);
     QObject::connect(&tray, &QSystemTrayIcon::activated, &controller, [&controller](QSystemTrayIcon::ActivationReason reason) {
         if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) controller.showWindow("usage");
     });
+    bool trayHostWarned = false;
     auto updateTray = [&] {
-        tray.setVisible(!noTray && controller.settings().value("showTray").toBool());
-        tray.setToolTip("CodexBar · " + (controller.summary().isEmpty() ? "Usage unavailable" : controller.summary()) +
-            " · " + controller.settings().value("quotaDisplay").toString() + (controller.stale() ? " · out of date" : ""));
+        const bool trayWanted = !noTray && controller.settings().value("showTray").toBool();
+        // GNOME ships no tray host of its own; without a StatusNotifier extension the icon
+        // never appears and Qt reports no error. Say so once instead of failing silently.
+        if (trayWanted && !trayHostWarned && !QSystemTrayIcon::isSystemTrayAvailable()) {
+            trayHostWarned = true;
+            std::fputs("No system tray host is available; the tray icon will not appear. "
+                       "On GNOME, enable the AppIndicator extension. "
+                       "Windows still open from the launcher or --usage.\n", stderr);
+        }
+        tray.setVisible(trayWanted);
+        tray.setToolTip("CodexBar · " +
+            (controller.summary().isEmpty() ? QObject::tr("Usage unavailable") : controller.summary()) +
+            " · " + controller.settings().value("quotaDisplay").toString() +
+            (controller.stale() ? QObject::tr(" · out of date") : QString()));
         if (controller.settings().value("trayStyle") == "icon") { tray.setIcon(QIcon(":/icon.svg")); return; }
         QVariantList windows;
         if (!controller.entries().isEmpty()) windows = controller.entries().first().toMap().value("windows").toList();

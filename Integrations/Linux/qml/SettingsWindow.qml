@@ -5,7 +5,7 @@ import "../Shared/Usage.js" as Usage
 
 ApplicationWindow {
     id: window
-    title: "Settings"
+    title: qsTr("Settings")
     width: 680; height: 720
     minimumWidth: 500; minimumHeight: 480
     property string feedback: ""
@@ -34,7 +34,7 @@ ApplicationWindow {
     }
     Shortcut { sequence: "Escape"; onActivated: window.hide() }
     header: ToolBar {
-        Label { anchors.left: parent.left; anchors.leftMargin: 24; anchors.verticalCenter: parent.verticalCenter; text: "Settings"; font.pixelSize: 22; font.bold: true }
+        Label { anchors.left: parent.left; anchors.leftMargin: 24; anchors.verticalCenter: parent.verticalCenter; text: qsTr("Settings"); font.pixelSize: 22; font.bold: true }
         implicitHeight: 64
     }
     ColumnLayout {
@@ -42,9 +42,9 @@ ApplicationWindow {
         TabBar {
             Layout.fillWidth: true
             currentIndex: window.section
-            TabButton { text: "General"; onClicked: window.section = 0 }
-            TabButton { text: "Providers"; onClicked: window.section = 1 }
-            TabButton { text: "Advanced"; onClicked: window.section = 2 }
+            TabButton { text: qsTr("General"); onClicked: window.section = 0 }
+            TabButton { text: qsTr("Providers"); onClicked: window.section = 1 }
+            TabButton { text: qsTr("Advanced"); onClicked: window.section = 2 }
         }
         ScrollView {
             id: scroll
@@ -53,10 +53,10 @@ ApplicationWindow {
             ColumnLayout {
                 width: scroll.availableWidth; spacing: 20
                 GroupBox {
-                    title: "Provider"; Layout.fillWidth: true; visible: window.section === 1
+                    title: qsTr("Provider"); Layout.fillWidth: true; visible: window.section === 1
                     ColumnLayout {
                         anchors.fill: parent; spacing: 10
-                        Label { text: "Provider" }
+                        Label { text: qsTr("Provider") }
                         ComboBox {
                             id: provider; Layout.fillWidth: true; editable: true
                             model: ["codex", "claude", "both", "enabled", "cursor", "gemini", "copilot", "antigravity", "custom", "all"]
@@ -69,7 +69,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 ComboBox { id: available; model: desktop.providers; textRole: "displayName"; Layout.fillWidth: true }
                                 Button {
-                                    text: "Add"
+                                    text: qsTr("Add")
                                     enabled: available.currentIndex >= 0
                                     onClicked: {
                                         var id = desktop.providers[available.currentIndex].provider;
@@ -84,95 +84,101 @@ ApplicationWindow {
                                     required property int index
                                     Layout.fillWidth: true
                                     Label { text: Usage.providerName(modelData); Layout.fillWidth: true; wrapMode: Text.Wrap }
-                                    Button { text: "↑"; Accessible.name: "Move " + modelData + " up"; enabled: index > 0; onClicked: window.moveProvider(index, -1) }
-                                    Button { text: "↓"; Accessible.name: "Move " + modelData + " down"; enabled: index < window.providerOrder.length - 1; onClicked: window.moveProvider(index, 1) }
-                                    Button { text: "Remove"; onClicked: { var order = window.providerOrder.slice(); order.splice(index, 1); window.providerOrder = order; } }
+                                    Button { text: "↑"; Accessible.name: qsTr("Move %1 up").arg(modelData); enabled: index > 0; onClicked: window.moveProvider(index, -1) }
+                                    Button { text: "↓"; Accessible.name: qsTr("Move %1 down").arg(modelData); enabled: index < window.providerOrder.length - 1; onClicked: window.moveProvider(index, 1) }
+                                    Button { text: qsTr("Remove"); onClicked: { var order = window.providerOrder.slice(); order.splice(index, 1); window.providerOrder = order; } }
                                 }
                             }
                         }
-                        Label { text: "Choose custom to select and order providers, or enabled to follow your CLI configuration."; Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.65 }
+                        Label { text: qsTr("Choose custom to select and order providers, or enabled to follow your CLI configuration."); Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.65 }
                         RowLayout {
                             Layout.fillWidth: true
-                            Label { text: "Source"; Layout.fillWidth: true }
+                            Label { text: qsTr("Source"); Layout.fillWidth: true }
                             ComboBox { id: source; model: ["auto", "oauth", "cli", "api", "web"] }
                         }
                         RowLayout {
                             Layout.fillWidth: true
-                            Label { text: "Account (0 = default)"; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                            Label { text: qsTr("Account (0 = default)"); Layout.fillWidth: true; wrapMode: Text.Wrap }
                             SpinBox { enabled: !allAccounts.checked && ["custom", "both", "all", "enabled"].indexOf(provider.editText) < 0; id: account; from: 0; to: 999; editable: true }
                         }
-                        Option { enabled: ["custom", "both", "all", "enabled"].indexOf(provider.editText) < 0; id: allAccounts; text: "All accounts" }
-                        Option { id: identity; text: "Show account identity" }
+                        Option { enabled: ["custom", "both", "all", "enabled"].indexOf(provider.editText) < 0; id: allAccounts; text: qsTr("All accounts") }
+                        Option { id: identity; text: qsTr("Show account identity") }
                         RowLayout {
                             Layout.fillWidth: true
                             ComboBox { id: loginProvider; model: ["codex", "claude"]; Layout.fillWidth: true }
-                            Button { text: "Sign in…"; onClicked: { if (desktop.accountAction(loginProvider.currentText, "login")) window.feedback = "Finish signing in in the terminal, then refresh usage."; } }
-                            Button { text: "Sign out…"; onClicked: signOut.open() }
+                            Button {
+                                text: qsTr("Sign in…")
+                                onClicked: {
+                                    if (desktop.accountAction(loginProvider.currentText, "login"))
+                                        window.feedback = qsTr("Finish signing in in the terminal, then refresh usage.");
+                                }
+                            }
+                            Button { text: qsTr("Sign out…"); onClicked: signOut.open() }
                         }
-                        Label { text: "Sign-in opens your provider CLI in a terminal. Account selection above only changes displayed usage."; Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.65 }
+                        Label { text: qsTr("Sign-in opens your provider CLI in a terminal. Account selection above only changes displayed usage."); Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.65 }
                     }
                 }
                 GroupBox {
-                    title: "Updates"; Layout.fillWidth: true; visible: window.section === 0
+                    title: qsTr("Updates"); Layout.fillWidth: true; visible: window.section === 0
                     ColumnLayout {
                         anchors.fill: parent; spacing: 10
                         RowLayout {
                             Layout.fillWidth: true
-                            Label { text: "Refresh every (seconds)"; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                            Label { text: qsTr("Refresh every (seconds)"); Layout.fillWidth: true; wrapMode: Text.Wrap }
                             SpinBox { id: interval; from: 60; to: 3600; stepSize: 60; editable: true }
                         }
-                        Option { id: refreshOnOpen; text: "Refresh when opening usage" }
-                        Option { id: notices; text: "Notify about low quota, resets, and outages" }
+                        Option { id: refreshOnOpen; text: qsTr("Refresh when opening usage") }
+                        Option { id: notices; text: qsTr("Notify about low quota, resets, and outages") }
                         RowLayout {
                             Layout.fillWidth: true; enabled: notices.checked
-                            Label { text: "Remaining quota threshold (%)"; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                            Label { text: qsTr("Remaining quota threshold (%)"); Layout.fillWidth: true; wrapMode: Text.Wrap }
                             SpinBox { id: threshold; from: 1; to: 99; editable: true }
                         }
-                        Option { id: status; text: "Service status" }
+                        Option { id: status; text: qsTr("Service status") }
                     }
                 }
                 GroupBox {
-                    title: "Desktop"; Layout.fillWidth: true; visible: window.section === 0
+                    title: qsTr("Desktop"); Layout.fillWidth: true; visible: window.section === 0
                     ColumnLayout {
                         anchors.fill: parent; spacing: 10
                         Button {
-                            text: desktop.launchAtLogin ? "Disable start at login" : "Enable start at login"
+                            text: desktop.launchAtLogin ? qsTr("Disable start at login") : qsTr("Enable start at login")
                             onClicked: desktop.setLaunchAtLogin(!desktop.launchAtLogin)
                         }
-                        Option { id: tray; text: "Tray icon" }
-                        Label { text: "Optional with the Omarchy widget. CodexBar is also available in the application launcher."; Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.65 }
+                        Option { id: tray; text: qsTr("Tray icon") }
+                        Label { text: qsTr("Optional with the Omarchy widget. CodexBar is also available in the application launcher."); Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.65 }
                         RowLayout {
                             Layout.fillWidth: true
-                            Label { text: "Tray style"; Layout.fillWidth: true }
+                            Label { text: qsTr("Tray style"); Layout.fillWidth: true }
                             ComboBox { id: trayStyle; model: ["meters", "icon"] }
                         }
-                        Option { id: costs; text: "Local spending" }
+                        Option { id: costs; text: qsTr("Local spending") }
                     }
                 }
                 GroupBox {
-                    title: "Display"; Layout.fillWidth: true; visible: window.section === 0
+                    title: qsTr("Display"); Layout.fillWidth: true; visible: window.section === 0
                     ColumnLayout {
                         anchors.fill: parent; spacing: 10
                         RowLayout {
                             Layout.fillWidth: true
-                            Label { text: "Quota"; Layout.fillWidth: true }
+                            Label { text: qsTr("Quota"); Layout.fillWidth: true }
                             ComboBox { id: quota; model: ["remaining", "used"] }
                         }
                         RowLayout {
                             Layout.fillWidth: true
-                            Label { text: "Reset time"; Layout.fillWidth: true }
+                            Label { text: qsTr("Reset time"); Layout.fillWidth: true }
                             ComboBox { id: reset; model: ["countdown", "absolute", "both"] }
                         }
-                        Option { id: theme; text: "Follow Omarchy theme colors" }
-                        Option { id: pace; text: "Show pace" }
-                        Option { id: warnings; text: "Highlight low quota" }
+                        Option { id: theme; text: qsTr("Follow Omarchy theme colors") }
+                        Option { id: pace; text: qsTr("Show pace") }
+                        Option { id: warnings; text: qsTr("Highlight low quota") }
                     }
                 }
                 GroupBox {
-                    title: "CLI"; Layout.fillWidth: true; visible: window.section === 2
+                    title: qsTr("CLI"); Layout.fillWidth: true; visible: window.section === 2
                     ColumnLayout {
                         anchors.fill: parent; spacing: 10
-                        Label { text: "Executable" }
+                        Label { text: qsTr("Executable") }
                         TextField { id: executable; Layout.fillWidth: true; selectByMouse: true; placeholderText: "codexbar" }
                     }
                 }
@@ -181,10 +187,10 @@ ApplicationWindow {
         Label { text: desktop.configError || window.feedback; visible: text !== ""; Layout.fillWidth: true; wrapMode: Text.Wrap }
         RowLayout {
             Layout.fillWidth: true
-            Label { text: "Closing windows keeps CodexBar running."; Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.65; font.pixelSize: 12 }
-            Button { text: "Cancel"; onClicked: window.hide() }
+            Label { text: qsTr("Closing windows keeps CodexBar running."); Layout.fillWidth: true; wrapMode: Text.Wrap; opacity: 0.65; font.pixelSize: 12 }
+            Button { text: qsTr("Cancel"); onClicked: window.hide() }
             Button {
-                text: "Save"; highlighted: true
+                text: qsTr("Save"); highlighted: true
                 onClicked: {
                     if (desktop.saveSettings({provider: provider.editText.trim(), source: source.currentText,
                         accountIndex: account.value, allAccounts: allAccounts.checked, showIdentity: identity.checked,
@@ -192,18 +198,18 @@ ApplicationWindow {
                         notifyThreshold: threshold.value, refreshSeconds: interval.value,
                         providerOrder: window.providerOrder, quotaDisplay: quota.currentText, resetDisplay: reset.currentText,
                         followOmarchyTheme: theme.checked, showPace: pace.checked, warningColors: warnings.checked, trayStyle: trayStyle.currentText,
-                        refreshOnOpen: refreshOnOpen.checked, showTray: tray.checked, executable: executable.text.trim()})) window.feedback = "Settings saved";
+                        refreshOnOpen: refreshOnOpen.checked, showTray: tray.checked, executable: executable.text.trim()})) window.feedback = qsTr("Settings saved");
                 }
             }
         }
     }
     Dialog {
         id: signOut
-        title: "Sign out of " + loginProvider.currentText + "?"
+        title: qsTr("Sign out of %1?").arg(loginProvider.currentText)
         anchors.centerIn: parent
         modal: true
         standardButtons: Dialog.Cancel | Dialog.Ok
-        Label { text: "This signs out the provider CLI on this machine."; wrapMode: Text.Wrap; width: Math.min(window.width - 80, 350) }
+        Label { text: qsTr("This signs out the provider CLI on this machine."); wrapMode: Text.Wrap; width: Math.min(window.width - 80, 350) }
         onAccepted: desktop.accountAction(loginProvider.currentText, "logout")
     }
     component Option: CheckBox {
