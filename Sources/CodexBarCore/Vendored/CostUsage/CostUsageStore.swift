@@ -7,6 +7,18 @@ import SQLite3
 import CSQLite3
 #endif
 
+/// Total-changes counter used only to detect that a write landed.
+/// Enterprise Linux 9 ships SQLite 3.34, which predates `sqlite3_total_changes64`;
+/// the `CSQLite3` shim falls back to the 32-bit counter there.
+@inline(__always)
+private func costUsageTotalChanges64(_ database: OpaquePointer) -> Int64 {
+    #if canImport(SQLite3)
+    sqlite3_total_changes64(database)
+    #else
+    codexbar_sqlite3_total_changes64(database)
+    #endif
+}
+
 package enum CostUsageStoreExecutorTestControl {
     package static let suppressCurrentContextArgument = "--cost-store-suppress-current-context-for-testing"
     package static let suppressCurrentContextAnswer = CommandLine.arguments.contains(
@@ -469,7 +481,7 @@ extension CostUsageStore {
             failureGeneration: self.failureGeneration,
             identity: identity,
             dataVersion: Self.scalarInt(database, "PRAGMA data_version"),
-            totalChanges: sqlite3_total_changes64(database),
+            totalChanges: costUsageTotalChanges64(database),
             schemaVersion: Self.scalarInt(database, "PRAGMA schema_version"),
             userVersion: Self.scalarInt(database, "PRAGMA user_version"),
             parserHash: Self.scalarText(database, "SELECT value FROM meta WHERE key = 'parser_hash'"))
@@ -489,9 +501,9 @@ extension CostUsageStore {
         _ database: OpaquePointer,
         _ operation: (OpaquePointer) throws -> T) throws -> T
     {
-        let changes = sqlite3_total_changes64(database)
+        let changes = costUsageTotalChanges64(database)
         defer {
-            if sqlite3_total_changes64(database) != changes {
+            if costUsageTotalChanges64(database) != changes {
                 self.retainedCodexBaseline = nil
                 self.retainedCodexRead = nil
             } else if let retained = self.retainedCodexBaseline,
