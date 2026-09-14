@@ -7,10 +7,10 @@ test_filter_arg = $(if $(value FILTER),--filter '$(subst ','"'"',$(value FILTER)
 .PHONY: build check docs-list format install lint release restart start start-debug start-release stop test test-fast test-skip-build test-live test-tty
 
 start:
-	./Scripts/compile_and_run.sh
+	./Scripts/run_linux.sh
 
 start-debug:
-	./Scripts/compile_and_run.sh
+	./Scripts/run_linux.sh
 
 start-release:
 	./Scripts/package_app.sh release
@@ -19,8 +19,12 @@ start-release:
 
 restart: start
 
+# Ask the running desktop to quit over its own IPC before falling back to a signal.
 stop:
-	pkill -x CodexBar || pkill -f CodexBar.app || true
+	@-$(HOME)/.local/bin/codexbar-linux --quit >/dev/null 2>&1
+	@-./.local/linux-build/codexbar-linux --quit >/dev/null 2>&1
+	@-pkill -x codexbar-linux >/dev/null 2>&1
+	@echo "CodexBar stopped."
 
 check lint:
 	./Scripts/lint.sh lint
